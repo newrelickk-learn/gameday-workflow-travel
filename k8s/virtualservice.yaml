@@ -1,0 +1,43 @@
+# GameDay演習用: X-Application-Code ヘッダーが "b" で始まるリクエストにのみ
+# 60%の確率で5秒の遅延を注入する。BFF側のtravel呼び出しタイムアウトは3秒のため、
+# 発生時はタイムアウト失敗になる。安定コード（bで始まらない）のリクエストは無条件で
+# 素通しする。
+apiVersion: networking.istio.io/v1
+kind: VirtualService
+metadata:
+  name: gameday-workflow-travel
+  namespace: gameday-workflow
+spec:
+  hosts:
+    - gameday-workflow-travel
+  http:
+    - match:
+        - headers:
+            x-application-code:
+              prefix: "b"
+      fault:
+        delay:
+          percentage:
+            value: 60
+          fixedDelay: 5s
+      route:
+        - destination:
+            host: gameday-workflow-travel
+            port:
+              number: 8004
+    - route:
+        - destination:
+            host: gameday-workflow-travel
+            port:
+              number: 8004
+---
+apiVersion: networking.istio.io/v1
+kind: DestinationRule
+metadata:
+  name: gameday-workflow-travel
+  namespace: gameday-workflow
+spec:
+  host: gameday-workflow-travel
+  trafficPolicy:
+    tls:
+      mode: ISTIO_MUTUAL

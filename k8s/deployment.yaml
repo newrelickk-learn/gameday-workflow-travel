@@ -1,0 +1,60 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: gameday-workflow-travel
+  namespace: gameday-workflow
+  labels:
+    app: gameday-workflow-travel
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: gameday-workflow-travel
+  template:
+    metadata:
+      labels:
+        app: gameday-workflow-travel
+    spec:
+      containers:
+        - name: gameday-workflow-travel
+          # CIのdeploy.ymlが `sed` でECRイメージに差し替える。初回applyのみこのタグが使われる。
+          image: gameday-workflow-travel:latest
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 8004
+              name: http
+          env:
+            - name: DATABASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: gameday-workflow-travel-secrets
+                  key: database-url
+            - name: DATABASE_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: gameday-workflow-travel-secrets
+                  key: database-username
+            - name: DATABASE_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: gameday-workflow-travel-secrets
+                  key: database-password
+          resources:
+            requests:
+              memory: "384Mi"
+              cpu: "250m"
+            limits:
+              memory: "768Mi"
+              cpu: "500m"
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 8004
+            initialDelaySeconds: 40
+            periodSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 8004
+            initialDelaySeconds: 20
+            periodSeconds: 5
