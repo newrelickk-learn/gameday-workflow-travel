@@ -39,6 +39,13 @@ spec:
                 secretKeyRef:
                   name: gameday-workflow-travel-secrets
                   key: database-password
+            - name: NEW_RELIC_APP_NAME
+              value: "gameday-workflow-travel"
+            - name: NEW_RELIC_LICENSE_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: gameday-workflow-newrelic-secrets
+                  key: license-key
           resources:
             requests:
               memory: "384Mi"

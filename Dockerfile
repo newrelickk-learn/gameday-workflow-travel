@@ -14,6 +14,13 @@ WORKDIR /app
 
 COPY --from=build /app/target/travel-*.jar app.jar
 
+# New Relic Java Agentの導入
+ADD https://download.newrelic.com/newrelic/java-agent/newrelic-agent/current/newrelic-java.zip /tmp/newrelic-java.zip
+RUN apt-get update && apt-get install -y unzip \
+    && unzip /tmp/newrelic-java.zip -d /app \
+    && rm /tmp/newrelic-java.zip \
+    && apt-get remove -y unzip && apt-get autoremove -y && rm -rf /var/lib/apt/lists/*
+
 EXPOSE 8004
 
-ENTRYPOINT ["java", "-jar", "app.jar"]
+ENTRYPOINT ["java", "-javaagent:/app/newrelic/newrelic.jar", "-jar", "app.jar"]
