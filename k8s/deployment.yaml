@@ -67,3 +67,33 @@ spec:
             initialDelaySeconds: 60
             periodSeconds: 5
             failureThreshold: 6
+        - name: newrelic-infra-sidecar
+          # Fargate等でDaemonSetが使えない環境向けに、New Relic Infrastructure Agentを
+          # サイドカーとして各Podに同乗させ、そのPod自身のプロセス・リソース使用状況を収集する。
+          image: newrelic/infrastructure-bundle:latest
+          imagePullPolicy: IfNotPresent
+          securityContext:
+            privileged: false
+          env:
+            - name: NRIA_LICENSE_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: gameday-workflow-newrelic-secrets
+                  key: license-key
+            - name: NRIA_DISPLAY_NAME
+              value: "gameday-workflow-travel"
+            - name: CLUSTER_NAME
+              value: "Gameday"
+            - name: NRIA_OVERRIDE_HOST_ROOT
+              value: ""
+            - name: FARGATE
+              value: "true"
+            - name: NRIA_PASSTHROUGH_ENVIRONMENT
+              value: "FARGATE"
+          resources:
+            requests:
+              memory: "128Mi"
+              cpu: "100m"
+            limits:
+              memory: "256Mi"
+              cpu: "200m"
