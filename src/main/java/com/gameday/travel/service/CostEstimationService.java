@@ -3,6 +3,7 @@ package com.gameday.travel.service;
 import com.gameday.travel.dto.CostEstimateResponse;
 import com.gameday.travel.entity.City;
 import com.gameday.travel.repository.CityRepository;
+import com.newrelic.api.agent.NewRelic;
 import org.springframework.stereotype.Service;
 
 import java.time.Instant;
@@ -28,6 +29,12 @@ public class CostEstimationService {
         City departure = requireCity(departureCityId);
         City arrival = requireCity(arrivalCityId);
 
+        NewRelic.addCustomParameter("travel.departureCityId", departureCityId);
+        NewRelic.addCustomParameter("travel.arrivalCityId", arrivalCityId);
+        NewRelic.addCustomParameter("travel.departureCityName", departure.getNameJa());
+        NewRelic.addCustomParameter("travel.arrivalCityName", arrival.getNameJa());
+        NewRelic.addCustomParameter("travel.isUnstableRoute", departure.isUnstable() || arrival.isUnstable());
+
         simulateProcessingDelay();
 
         long distanceUnits = Math.abs(departure.getId() - arrival.getId());
@@ -35,6 +42,9 @@ public class CostEstimationService {
         // 「ちゃんと計算している感」を出すための±5%の変動。実際の障害注入はIstio側のみで行う。
         double variance = 0.95 + random.nextDouble() * 0.10;
         long amount = Math.round(baseAmount * variance / 100) * 100;
+
+        NewRelic.addCustomParameter("travel.distanceUnits", distanceUnits);
+        NewRelic.addCustomParameter("travel.amount", amount);
 
         return new CostEstimateResponse(amount, "JPY", Instant.now());
     }
