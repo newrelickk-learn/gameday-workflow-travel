@@ -9,9 +9,10 @@ import java.util.Optional;
 
 public interface CityConnectionRepository extends JpaRepository<CityConnection, Long> {
 
-    // 直行便があるかどうかの単純な等値検索（(from_city_id, to_city_id)のUNIQUE制約が
-    // インデックスを兼ねるため、常に高速）。
-    @Query(value = "SELECT distance_units FROM city_connections WHERE from_city_id = :fromCityId AND to_city_id = :toCityId",
+    // 直行便があるかどうかの単純な等値検索（from_city_idのインデックスを使うため常に高速）。
+    // 北九州の各ハブは1日2便あるため同じ(from,to)ペアが複数行になり得るので、
+    // MIN()で最安の1便に絞る（0件ならNULL=Optional.emptyになる）。
+    @Query(value = "SELECT MIN(distance_units) FROM city_connections WHERE from_city_id = :fromCityId AND to_city_id = :toCityId",
             nativeQuery = true)
     Optional<Integer> findDirectDistance(@Param("fromCityId") Long fromCityId, @Param("toCityId") Long toCityId);
 
@@ -21,9 +22,9 @@ public interface CityConnectionRepository extends JpaRepository<CityConnection, 
     // 展開される行数が組み合わせ的に増え、実行コストが跳ね上がる。
     // 主要都市どうしは直行便テーブル（findDirectDistance）だけで解決するため、
     // このクエリは北九州が絡む一部の組み合わせでしか実行されない。
-    // ホップ数は実測（本番相当DBでEXPLAIN ANALYZE）で609ms前後になるよう調整済み。
-    // New Relic Javaエージェントのslow SQL/Explain Plan収集の既定閾値（500ms）を
-    // 安全マージンを持って超えるようにするため。
+    // ホップ数（7）と北九州の各ハブ1日2便（DBシード側）を組み合わせ、実測（本番相当DBで
+    // EXPLAIN ANALYZE）で1.2秒前後になるよう調整済み。New Relic Javaエージェントの
+    // slow SQL/Explain Plan収集の既定閾値（500ms）を安全マージンを持って超えるため。
 
     @Query(value = """
             WITH RECURSIVE route_search AS (
