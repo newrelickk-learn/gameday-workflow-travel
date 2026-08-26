@@ -16,11 +16,15 @@ public interface CityConnectionRepository extends JpaRepository<CityConnection, 
     Optional<Integer> findDirectDistance(@Param("fromCityId") Long fromCityId, @Param("toCityId") Long toCityId);
 
     // 直行便が無い場合のフォールバック: 経由地点を辿って最安ルートを探す再帰CTE。
-    // 訪問済み都市を除外しながら最大6ホップまで総当たりで経路を展開するため、
+    // 訪問済み都市を除外しながら最大7ホップまで総当たりで経路を展開するため、
     // 分岐の多いグラフ（＝北九州のように直行便が無く、複数のハブ都市経由になるケース）では
     // 展開される行数が組み合わせ的に増え、実行コストが跳ね上がる。
     // 主要都市どうしは直行便テーブル（findDirectDistance）だけで解決するため、
     // このクエリは北九州が絡む一部の組み合わせでしか実行されない。
+    // ホップ数は実測（本番相当DBでEXPLAIN ANALYZE）で609ms前後になるよう調整済み。
+    // New Relic Javaエージェントのslow SQL/Explain Plan収集の既定閾値（500ms）を
+    // 安全マージンを持って超えるようにするため。
+
     @Query(value = """
             WITH RECURSIVE route_search AS (
                 SELECT
@@ -40,7 +44,7 @@ public interface CityConnectionRepository extends JpaRepository<CityConnection, 
                     rs.hop_count + 1
                 FROM route_search rs
                 JOIN city_connections cc ON cc.from_city_id = rs.current_city_id
-                WHERE rs.hop_count < 6
+                WHERE rs.hop_count < 7
                   AND NOT (cc.to_city_id = ANY (rs.visited))
             )
             SELECT MIN(total_distance)
