@@ -22,9 +22,11 @@ public interface CityConnectionRepository extends JpaRepository<CityConnection, 
     // 展開される行数が組み合わせ的に増え、実行コストが跳ね上がる。
     // 主要都市どうしは直行便テーブル（findDirectDistance）だけで解決するため、
     // このクエリは北九州が絡む一部の組み合わせでしか実行されない。
-    // ホップ数（7）と北九州の各ハブ1日2便（DBシード側）を組み合わせ、実測（本番相当DBで
-    // EXPLAIN ANALYZE）で1.2秒前後になるよう調整済み。New Relic Javaエージェントの
-    // slow SQL/Explain Plan収集の既定閾値（500ms）を安全マージンを持って超えるため。
+    // ホップ数（7）と北九州の各ハブへの便数（DBシード側、現行8便＝現行2便+廃止路線6便）を
+    // 組み合わせ、実測（本番相当DBでEXPLAIN ANALYZE）で5秒前後になるよう調整済み。
+    // New Relic Javaエージェントのslow SQL/Explain Plan収集の既定閾値（500ms）だけでなく、
+    // NRDOT(nrpostgresqlreceiver)側のクエリサンプリング間隔（15秒）に対しても、実行中に
+    // サンプルされる確率を上げるため十分な長さ（1秒未満だと拾われないことがある）を確保する。
 
     @Query(value = """
             WITH RECURSIVE route_search AS (
