@@ -28,12 +28,21 @@ public interface CityConnectionRepository extends JpaRepository<CityConnection, 
     // NRDOT(nrpostgresqlreceiver)側のクエリサンプリング間隔（15秒）に対しても、実行中に
     // サンプルされる確率を上げるため十分な長さ（1秒未満だと拾われないことがある）を確保する。
     //
-    // hop_countの初期値・加算をGREATEST(1::integer, 1::integer)にしているのは意図的。
+    // hop_countの初期値・加算をGREATEST(1 :: integer, 1 :: integer)にしているのは意図的。
     // pg_stat_statementsはリテラルをパラメータ化する際、単純な値への型キャスト（1::integer）は
     // パーサーの定数畳み込みで消えてしまい正規化後のクエリに反映されない。一方、GREATESTのような
     // オーバーロードされた関数の引数として型キャストすると、関数解決の結果としてASTに残るため、
     // nrpostgresqlreceiver（EXPLAIN実行時にNULLパラメータを渡す）が型不明(unknown)による
     // "operator does not exist"エラーを起こさずにEXPLAINを取得できるようになる。
+    //
+    // "::"の前後に空白を入れているのも意図的（詰めた"::"にしない）。New RelicのAPM⇔DB
+    // クロスエンジン相関ハッシュ(db.query.text.normalized.hash)の計算アルゴリズムは、
+    // ":"の直後に識別子が続くとOracle/PL-SQL形式のbind変数(:name)と誤認識してプレースホルダに
+    // 潰してしまう。詰めた"?::integer"だと2文字目の":"が":integer"という独立したプレースホルダに
+    // 誤変換され、pg_stat_statementsが出力する"? :: integer"（コロン前後に空白を入れて整形する）
+    // 側とは異なる正規化結果・ハッシュになってしまう。空白を入れておけば誤認識されず、
+    // APM側(db.statement、Javaのソースコードそのまま)とInfrastructure側(db.query.text、
+    // PostgreSQLが整形した後のテキスト)の正規化ハッシュが一致する。
 
     @Query(value = """
             WITH RECURSIVE route_search AS (
@@ -41,7 +50,7 @@ public interface CityConnectionRepository extends JpaRepository<CityConnection, 
                     cc.to_city_id AS current_city_id,
                     ARRAY[cc.from_city_id, cc.to_city_id] AS visited,
                     cc.distance_units AS total_distance,
-                    GREATEST(1::integer, 1::integer) AS hop_count
+                    GREATEST(1 :: integer, 1 :: integer) AS hop_count
                 FROM city_connections cc
                 WHERE cc.from_city_id = :fromCityId
 
@@ -51,7 +60,7 @@ public interface CityConnectionRepository extends JpaRepository<CityConnection, 
                     cc.to_city_id,
                     rs.visited || cc.to_city_id,
                     rs.total_distance + cc.distance_units,
-                    rs.hop_count + GREATEST(1::integer, 1::integer)
+                    rs.hop_count + GREATEST(1 :: integer, 1 :: integer)
                 FROM route_search rs
                 JOIN city_connections cc ON cc.from_city_id = rs.current_city_id
                 WHERE rs.hop_count < 7
