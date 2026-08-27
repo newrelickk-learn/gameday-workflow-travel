@@ -19,7 +19,11 @@ spec:
         - name: gameday-workflow-travel
           # CIのdeploy.ymlが `sed` でECRイメージに差し替える。初回applyのみこのタグが使われる。
           image: gameday-workflow-travel:latest
-          imagePullPolicy: IfNotPresent
+          # イメージタグが常に:latest固定のため、IfNotPresentだとノードにキャッシュされた
+          # 古いダイジェストのイメージが再利用され、再デプロイしてもコードが更新されない
+          # ケースがあった。タグ変更を伴わないデプロイでも確実に最新イメージを取得するため
+          # Alwaysにする。
+          imagePullPolicy: Always
           ports:
             - containerPort: 8004
               name: http
