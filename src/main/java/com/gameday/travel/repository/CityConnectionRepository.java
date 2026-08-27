@@ -34,7 +34,7 @@ public interface CityConnectionRepository extends JpaRepository<CityConnection, 
                     cc.to_city_id AS current_city_id,
                     ARRAY[cc.from_city_id, cc.to_city_id] AS visited,
                     cc.distance_units AS total_distance,
-                    1 AS hop_count
+                    1::integer AS hop_count
                 FROM city_connections cc
                 WHERE cc.from_city_id = :fromCityId
 
@@ -44,7 +44,7 @@ public interface CityConnectionRepository extends JpaRepository<CityConnection, 
                     cc.to_city_id,
                     rs.visited || cc.to_city_id,
                     rs.total_distance + cc.distance_units,
-                    rs.hop_count + 1
+                    rs.hop_count + 1::integer
                 FROM route_search rs
                 JOIN city_connections cc ON cc.from_city_id = rs.current_city_id
                 WHERE rs.hop_count < 7
