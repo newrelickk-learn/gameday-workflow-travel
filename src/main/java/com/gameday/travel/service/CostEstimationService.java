@@ -15,8 +15,6 @@ import java.util.Random;
 @Service
 public class CostEstimationService {
 
-    // 距離に応じた概算費用の目安として使う単価。実際の距離テーブルではなく、
-    // 都市ID差から機械的に算出する簡易ロジック（都市が増えても手動でペア表を保守しなくてよい）。
     private static final long BASE_AMOUNT = 8000L;
     private static final long PER_DISTANCE_UNIT = 3500L;
 
@@ -45,7 +43,6 @@ public class CostEstimationService {
 
         long distanceUnits = Math.abs(departure.getId() - arrival.getId());
         long baseAmount = BASE_AMOUNT + distanceUnits * PER_DISTANCE_UNIT;
-        // 「ちゃんと計算している感」を出すための±5%の変動。実際の障害注入はIstio側のみで行う。
         double variance = 0.95 + random.nextDouble() * 0.10;
         long amount = Math.round(baseAmount * variance / 100) * 100;
 
@@ -60,9 +57,6 @@ public class CostEstimationService {
                 .orElseThrow(() -> new NoSuchElementException("Unknown city id: " + cityId));
     }
 
-    // 直行便があればそれを使い、無ければ経由地点をたどって探す。主要都市どうしは
-    // 必ず直行便があるため前者で即終了するが、直行便を持たない都市（北九州）が絡む場合は
-    // 後者の複雑な経路探索クエリにフォールバックする。
     private void resolveRoute(Long departureCityId, Long arrivalCityId) {
         Optional<Integer> direct = cityConnectionRepository.findDirectDistance(departureCityId, arrivalCityId);
         boolean isDirectRoute = direct.isPresent();
