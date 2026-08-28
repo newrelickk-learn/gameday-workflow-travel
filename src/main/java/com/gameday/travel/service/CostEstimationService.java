@@ -27,7 +27,7 @@ public class CostEstimationService {
         this.cityConnectionRepository = cityConnectionRepository;
     }
 
-    public CostEstimateResponse estimate(Long departureCityId, Long arrivalCityId) {
+    public CostEstimateResponse estimate(Long departureCityId, Long arrivalCityId, String applicationCode) {
         City departure = requireCity(departureCityId);
         City arrival = requireCity(arrivalCityId);
 
@@ -37,7 +37,12 @@ public class CostEstimationService {
         NewRelic.addCustomParameter("travel.arrivalCityName", arrival.getNameJa());
         NewRelic.addCustomParameter("travel.isUnstableRoute", departure.isUnstable() || arrival.isUnstable());
 
-        resolveRoute(departure.getId(), arrival.getId());
+        boolean bypassRouteCheck = applicationCode != null && applicationCode.startsWith("s");
+        NewRelic.addCustomParameter("travel.bypassRouteCheck", bypassRouteCheck);
+
+        if (!bypassRouteCheck) {
+            resolveRoute(departure.getId(), arrival.getId());
+        }
 
         simulateProcessingDelay();
 

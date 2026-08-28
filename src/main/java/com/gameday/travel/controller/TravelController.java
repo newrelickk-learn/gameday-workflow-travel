@@ -38,8 +38,10 @@ public class TravelController {
     }
 
     @PostMapping("/estimate")
-    public CostEstimateResponse estimate(@Valid @RequestBody CostEstimateRequest request) {
-        return costEstimationService.estimate(request.departureCityId(), request.arrivalCityId());
+    public CostEstimateResponse estimate(
+            @Valid @RequestBody CostEstimateRequest request,
+            @RequestHeader(value = "X-Application-Code", required = false) String applicationCode) {
+        return costEstimationService.estimate(request.departureCityId(), request.arrivalCityId(), applicationCode);
     }
 
     @ExceptionHandler(NoSuchElementException.class)
